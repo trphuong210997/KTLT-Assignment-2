@@ -20,24 +20,26 @@
 ////////////////////////////////////////////////////////////////////////
 
 // Forward declaration
-// class MovingObject;
-// class Position;
-// class Configuration;
-// class Map;
+class MovingObject;
+class Position;
+class Configuration;
+class Map;
+class Sherlock;
+class Watson;
+class Criminal;
+class Robot; 
+class RobotS;
+class RobotW;
+class RobotSW;
+class RobotC;
 
-// class Criminal;
-// class RobotS;
-// class RobotW;
-// class RobotSW;
-// class RobotC;
+class ArrayMovingObject;
+class StudyPinkProgram;
 
-// class ArrayMovingObject;
-// class StudyPinkProgram;
-
-// class BaseItem;
-// class BaseBag;
-// class SherlockBag;
-// class WatsonBag;
+class BaseItem;
+class BaseBag;
+class SherlockBag;
+class WatsonBag;
 
 class TestStudyInPink;
 
@@ -46,12 +48,15 @@ enum ElementType { PATH, WALL, FAKE_WALL };
 enum RobotType { C=0, S, W, SW };
 
 class MapElement {
+    friend class TestStudyInPink;
     protected:
         ElementType type;
     public:
-        MapElement(ElementType in_type);
-        virtual ~MapElement();
-        virtual ElementType getType() const;
+        MapElement(ElementType in_type) : type(in_type) {};
+        virtual ~MapElement() {}
+        virtual ElementType getType() const {
+            return type;
+        }
 };
 
 class Path : public MapElement {
@@ -76,7 +81,90 @@ class FakeWall : public MapElement {
         }
 };
 
+class Position {
+    friend class TestStudyInPink;
+    private:
+        int r, c;
+    public:
+        static const Position npos;
+
+        Position(int r=0, int c=0) {
+            this->r = r;
+            this->c = c;
+        }
+
+        Position(const string & str_pos) {
+            int row, col;
+            sscanf(str_pos.c_str(), "%d %d", &row, &col);
+            this->r = row;
+            this->c = col;
+        }
+
+        int getRow() const {
+            return r;
+        }
+
+        int getCol() const {
+            return c;
+        }
+
+        void setRow(int r) {
+            this->r = r;
+        }
+
+        void setCol(int c) {
+            this->c = c;
+        }
+
+        string str() const {
+            ostringstream output;
+            output << "(" << r << "," << c << ")";
+            return output.str();
+        }
+
+        bool isEqual(int in_r, int in_c) const {
+            if (r == in_r && c == in_c) {
+                return true;
+            }
+            return false;
+        }
+};
+
+class MovingObject {
+    friend class TestStudyInPink;
+    protected:
+        int index;
+        Position pos;
+        Map * map;
+        string name;
+
+    public:
+        MovingObject() {}
+
+        MovingObject(int index, const Position pos, Map * map, const string & name="") {
+            this->index = index;
+            this->pos = pos;
+            this->map = map;
+            this->name = name;
+        }
+
+        virtual ~MovingObject() {}
+        virtual Position getNextPosition() = 0;
+
+        Position getCurrentPosition() const {
+            return pos;
+        }
+
+        virtual string getName() const {
+            return name;
+        }
+
+        virtual void move() = 0;
+        virtual string str() const = 0;
+};
+
 class Map {
+    friend class TestStudyInPink;
     private:
         int num_rows, num_cols;
         MapElement *** map;
@@ -122,98 +210,7 @@ class Map {
             delete [] map;
         }
 
-        bool isValid(const Position & pos, MovingObject * mv_obj) const {
-            if (pos.getRow() < 0 || pos.getRow() >= num_rows || pos.getCol() < 0 || pos.getCol() >= num_cols) {
-                return false;
-            }
-
-            if (map[pos.getRow()][pos.getCol()]->getType() == WALL) {
-                return false;
-            }
-
-            if (map[pos.getRow()][pos.getCol()]->getType() == FAKE_WALL) {
-                if (dynamic_cast<Watson*>(mv_obj) != nullptr) {       
-                        FakeWall * fake_wall = dynamic_cast<FakeWall *>(map[pos.getRow()][pos.getCol()]);
-                        if (fake_wall->getReqExp() > dynamic_cast<Watson*>(mv_obj)->getExp()) {
-                            return false;
-                        }
-                    }
-            }
-            return true;
-        }
-};
-
-class Position {
-    private:
-        int r, c;
-    public:
-        static const Position npos;
-
-        Position(int r=0, int c=0);
-
-        Position(const string & str_pos) {
-            int row, col;
-            sscanf(str_pos.c_str(), "%d %d", &row, &col);
-            this->r = row;
-            this->c = col;
-        }
-
-        int getRow() const {
-            return r;
-        }
-
-        int getCol() const {
-            return c;
-        }
-
-        void setRow(int r) {
-            this->r = r;
-        }
-
-        void setCol(int c) {
-            this->c = c;
-        }
-
-        string str() const {
-            return "(" + to_string(r) + " " + to_string(c) + ")";
-        }
-
-        bool isEqual(int in_r, int in_c) const {
-            if (r == in_r && c == in_c) {
-                return true;
-            }
-            return false;
-        }
-    };
-
-const Position Position::npos = Position(-1, -1);
-
-class MovingObject {
-    protected:
-        int index;
-        Position pos;
-        Map * map;
-        string name;
-
-    public:
-        MovingObject() {}
-
-        MovingObject(int index, const Position pos, Map * map, const string & name="") {
-            this->index = index;
-            this->pos = pos;
-            this->map = map;
-            this->name = name;
-        }
-
-        virtual ~MovingObject() {}
-        virtual Position getNextPosition() = 0;
-
-        Position getCurrentPosition() const {
-            return pos;
-        }
-
-        virtual void move() = 0;
-        virtual string str() const = 0;
+        bool isValid(const Position & pos, MovingObject * mv_obj) const;
 };
 
 class Character : public MovingObject {
@@ -224,54 +221,32 @@ class Character : public MovingObject {
         string name;
     
     public:
+        Character() {}
         Character(int index, const Position & pos, Map * map, const string & name) : MovingObject(index, pos, map, name) {}
 };
 
-void CheckHpExp(int & hp, int & exp) {
-    if (hp < 0)
-        hp = 0;
+void CheckHpExp(int & hp, int & exp) ;
 
-    if (hp > 500)
-        hp = 500;
-
-    if (exp < 0)
-        exp = 0;
-
-    if (exp > 900)
-        exp = 900;
-}
-
-Position MovingRule(Position pos, string & moving_rule) {
-    Position next_pos = pos;
-
-    if (moving_rule[0] == 'U') 
-        next_pos.setRow(next_pos.getRow() - 1);
-    
-    else if (moving_rule[0] == 'D') 
-        next_pos.setRow(next_pos.getRow() + 1);
-    
-    else if (moving_rule[0] == 'L') 
-        next_pos.setCol(next_pos.getCol() - 1);
-    
-    else if (moving_rule[0] == 'R') 
-        next_pos.setCol(next_pos.getCol() + 1);
-
-    moving_rule = moving_rule.substr(1) + moving_rule[0];
-    return next_pos;
-}
+Position MovingRule(Position pos, string & moving_rule) ;
 
 class Sherlock : public Character {
-    protected:
-        string moving_rule;
+    private:
         int hp;
         int exp;
 
     public:
-        Sherlock(int index, const string & moving_rule, const Position & init_pos, Map * map, int init_hp, int init_exp) : Character(index, init_pos, map, "Sherlock"), moving_rule(moving_rule), hp(init_hp), exp(init_exp) {
-            CheckHpExp(hp, exp);
-        }
+        string moving_rule;
+        string str_moving_rule;
 
-        ~Sherlock() {}
+    public:
+        Sherlock(int index, const string & moving_rule, const Position & init_pos, Map * map, int init_hp, int init_exp) : moving_rule(moving_rule), hp(init_hp), exp(init_exp) {
+            CheckHpExp(hp, exp);
+            this->name = "Sherlock";
+            this->pos = init_pos;
+            this->map = map;
+            this->index = index;
+            this->str_moving_rule = moving_rule;
+        }
 
         Position getNextPosition() {
             int r = pos.getRow();
@@ -310,22 +285,30 @@ class Sherlock : public Character {
         }
 
         string str() const {
-            return "Sherlock[index=" + to_string(index) + ";pos=" + pos.str() + ";moving_rule=" + moving_rule + "]";
+            ostringstream output;
+            output << "Sherlock[index=" << index << ";pos=" << pos.str() << ";moving_rule=" << str_moving_rule << "]";
+            return output.str();
         }
 };
 
 class Watson : public Character {
     private:
-        string moving_rule;
         int hp;
         int exp;
 
     public:
-        Watson(int index, const string & moving_rule, const Position & init_pos, Map * map, int init_hp, int init_exp) : Character(index, init_pos, map, "Watson"), moving_rule(moving_rule), hp(init_hp), exp(init_exp) {
-            CheckHpExp(hp, exp);
-        }
+        string moving_rule;
+        string str_moving_rule;
 
-        ~Watson() {}
+    public:
+        Watson(int index, const string & moving_rule, const Position & init_pos, Map * map, int init_hp, int init_exp) : moving_rule(moving_rule), hp(init_hp), exp(init_exp) {
+            CheckHpExp(hp, exp);
+            this->name = "Watson";
+            this->pos = init_pos;
+            this->map = map;
+            this->index = index;
+            this->str_moving_rule = moving_rule;
+        }
 
         Position getNextPosition() {
             int r = pos.getRow();
@@ -364,52 +347,13 @@ class Watson : public Character {
         }
 
         string str() const {
-            return "Watson[index=" + to_string(index) + ";pos=" + pos.str() + ";moving_rule=" + moving_rule + "]";
+            return "Watson[index=" + to_string(index) + ";pos=" + pos.str() + ";moving_rule=" + str_moving_rule + "]";
         }
 };
 
-int ManhattanDistance(Position pos1, Position pos2) {
-    return abs(pos1.getRow() - pos2.getRow()) + abs(pos1.getCol() - pos2.getCol());
-}
+int ManhattanDistance(Position pos1, Position pos2);
 
-Position CriminalNextPos(int u_distance, int d_distance, int l_distance, int r_distance, Position pos) {
-    Position next_pos = pos;
-
-    int count = 0;
-    int max = u_distance;
-    int max_distance[] = {u_distance, l_distance, d_distance, r_distance};
-    for (int i = 0; i < 4; ++i) {
-        if (max_distance[i] > max) {
-            max = max_distance[i];
-            count = i;
-        }
-    }
-
-    switch (count)
-    {
-    case 0:
-        next_pos.setRow(next_pos.getRow() - 1);
-        break;
-
-    case 1:
-        next_pos.setCol(next_pos.getCol() - 1);
-        break;
-
-    case 2:
-        next_pos.setRow(next_pos.getRow() + 1);
-        break;
-
-    case 3:
-        next_pos.setCol(next_pos.getCol() + 1);
-        break;
-
-    default:
-        break;
-    }
-
-    delete [] max_distance;
-    return next_pos;
-}
+Position CriminalNextPos(int u_distance, int d_distance, int l_distance, int r_distance, Position pos) ;
 
 
 class Criminal : public Character {
@@ -418,12 +362,12 @@ class Criminal : public Character {
         Watson * watson;
 
     public:
-        Criminal(int index, const Position & init_pos, Map * map, Sherlock * sherlock, Watson * watson) : Character(index, init_pos, map, "Criminal") {
-            this->sherlock = sherlock;
-            this->watson = watson;
+        Criminal(int index, const Position & init_pos, Map * map, Sherlock * sherlock, Watson * watson) : sherlock(sherlock), watson(watson) {
+            this->name = "Criminal";
+            this->pos = init_pos;
+            this->map = map;
+            this->index = index;
         }
-
-        ~Criminal() {}
 
         Position getNextPosition() {
             Position Upos = this->pos;
@@ -465,11 +409,11 @@ class Criminal : public Character {
 };
 
 class ArrayMovingObject {
+    friend class TestStudyInPink;
     private:
-        MovingObject * arr_mv_objs;
-            int capacity;
-            int count;
-            MovingObject** arr_mv_objs; 
+        int capacity;
+        int count;
+        MovingObject** arr_mv_objs; 
 
     public:
         ArrayMovingObject(int capacity) : capacity(capacity), count(0) {
@@ -480,46 +424,49 @@ class ArrayMovingObject {
         }
 
         ~ArrayMovingObject() {
-            for (int i = 0; i < count; i++) {
-                delete arr_mv_objs[i]; // Delete each object
-            }
-            delete [] arr_mv_objs; // Delete the array of pointers
+            // for (int i = 0; i < count; i++) {
+            //     delete arr_mv_objs[i];
+            // }
+            delete [] arr_mv_objs;
         }
 
         bool isFull() const {
             return count == capacity;
         }
 
-    bool add(MovingObject * mv_obj) {
-        if (isFull()) {
-            return false;
+        bool add(MovingObject * mv_obj) {
+            if (isFull()) {
+                return false;
+            }
+            arr_mv_objs[count++] = mv_obj;
+            return true;
         }
-        arr_mv_objs[count++] = mv_obj;
-        return true;
-    }
 
-    MovingObject * get(int index) const {
-        if (index >= 0 && index < count) {
-            return arr_mv_objs[index];
-        } else {
-            return nullptr;
+        MovingObject * get(int index) const {
+            if (index >= 0 && index < count) {
+                return this->arr_mv_objs[index];
+            } else {
+                return nullptr;
+            }
         }
-    }
 
-    int size() const {
-        return count;
-    }
-
-    string str() const {
-        string res = "";
-        for (int i = 0; i < count; ++i) {
-            res += arr_mv_objs[i].str() + " ";
+        int size() const {
+            return count;
         }
-        return "ArrayMovingObject[count=" + to_string(count) + ";capacity=" + to_string(capacity) + ";" + res + "]";
-    }
+
+        string str() const {
+            string res = "";
+            for (int i = 0; i < count; ++i)
+                res += get(i)->str() + ";";
+            if (!res.empty()) {
+                res.pop_back();
+            }
+            return "ArrayMovingObject[count=" + to_string(count) + ";capacity=" + to_string(capacity) + ";" + res + "]";
+        }
 };
 
 class Configuration {
+    friend class TestStudyInPink;
     friend class StudyPinkProgram;
 
     private:
@@ -541,85 +488,120 @@ class Configuration {
         int num_steps;
 
     public:
-        Configuration(const string & filepath) {
+        Configuration(const string & filepath) : map_num_cols(0), map_num_rows(0), max_num_moving_objects(0), num_fake_walls(0), num_walls(0), sherlock_init_exp(0), sherlock_init_hp(0), watson_init_exp(0), watson_init_hp (0), num_steps(0) {
             ifstream file(filepath);
             if (!file.is_open()) {
                 cerr << "Error: cannot open file " << filepath << endl;
                 return;
             }
+                            
+                            
 
             string line;
             while (getline(file, line)) {
                 istringstream iss(line);
-                string key;
-                string rule;
-                int value;
-                char comma;
+                string key, value;
+                char delim;
                 int r, c;
 
-                if (iss >> key >> value) {
-                    if (key == "MAP_NUM_ROWS")
-                        map_num_rows = value;
-                    else if (key == "MAP_NUM_COLS")
-                        map_num_cols = value;
-                    else if (key == "MAX_NUM_MOVING_OBJECTS")
-                        max_num_moving_objects = value;
+                if (getline(iss, key, '=')) {
+                    if (key == "MAP_NUM_ROWS") 
+                        iss >> map_num_rows;
+                    else if (key == "MAP_NUM_COLS") 
+                        iss >> map_num_cols;
+                    else if (key == "MAX_NUM_MOVING_OBJECTS") 
+                        iss >> max_num_moving_objects;
                     else if (key == "NUM_WALLS")
-                        num_walls = value;
+                        iss >> num_walls;
                     else if (key == "NUM_FAKE_WALLS")
-                        num_fake_walls = value;
+                        iss >> num_fake_walls;
                     else if (key == "SHERLOCK_INIT_HP")
-                        sherlock_init_hp = value;
+                        iss >> sherlock_init_hp;
                     else if (key == "SHERLOCK_INIT_EXP")
-                        sherlock_init_exp = value;
+                        iss >> sherlock_init_exp;
                     else if (key == "WATSON_INIT_HP")
-                        watson_init_hp = value;
+                        iss >> watson_init_hp;
                     else if (key == "WATSON_INIT_EXP")
-                        watson_init_exp = value;
+                        iss >> watson_init_exp;
                     else if (key == "NUM_STEPS")
-                        num_steps = value;
-                    } 
-                
-                if (iss >> key >> rule) {
-                    if (key == "SHERLOCK_MOVING_RULE") 
-                        sherlock_moving_rule = rule;
-                    else if (key == "WATSON_MOVING_RULE") 
-                        watson_moving_rule = rule;
-                }
-                
-                if (iss >> key >> r >> comma >> c) {
-                    if (key == "SHERLOCK_INIT_POS") {
-                        sherlock_init_pos = Position(r, c);
-                    } else if (key == "WATSON_INIT_POS") {
-                        watson_init_pos = Position(r, c);
-                    } else if (key == "CRIMINAL_INIT_POS") {
-                        criminal_init_pos = Position(r, c);
+                        iss >> num_steps;
+                    else if (key == "SHERLOCK_MOVING_RULE")
+                        iss >> sherlock_moving_rule;
+                    else if (key == "SHERLOCK_INIT_POS") {
+                        iss >> delim >> r >> delim >> c;
+                        sherlock_init_pos = Position(r,c);
                     }
-                }   
-
-
+                    else if (key == "WATSON_MOVING_RULE")
+                        iss >> watson_moving_rule;
+                    else if (key == "WATSON_INIT_POS") {
+                        iss >> delim >> r >> delim >> c;
+                        watson_init_pos = Position(r,c);
+                    }
+                    else if (key == "CRIMINAL_INIT_POS") {
+                        iss >> delim >> r >> delim >> c;
+                        criminal_init_pos = Position(r,c);
+                    }
+                    else if (key == "ARRAY_WALLS") {
+                        arr_walls = new Position[num_walls];
+                        for (int i = 0; i < num_walls; ++i) {
+                            iss >> delim >> delim >> r >> delim >> c;
+                            Position pos = Position(r, c);
+                            arr_walls[i] = pos;
+                            if (i < num_walls - 1) { 
+                                iss.ignore();
+                            }
+                        }
+                    }
+                    else if (key == "ARRAY_FAKE_WALLS") {
+                        arr_fake_walls = new Position[num_fake_walls];
+                        for (int i = 0; i < num_fake_walls; ++i) {
+                            iss >> delim >> delim >> r >> delim >> c;
+                            Position pos = Position(r, c);
+                            arr_fake_walls[i] = pos;
+                            if (i < num_walls - 1) { 
+                                iss.ignore();
+                            }
+                        }
+                    }
+                }
             }
-
-
             file.close();
         }
         
 
         ~Configuration() {
-            delete [] arr_walls;
-            delete [] arr_fake_walls;
+            // delete arr_walls;
+            // delete arr_fake_walls;
         }
 
         string str() const {
             ostringstream oss;
-            oss << "Configuration" << endl;
+            oss << "Configuration[" << endl;
             oss << "MAP_NUM_ROWS=" << map_num_rows << endl;
             oss << "MAP_NUM_COLS=" << map_num_cols << endl;
             oss << "MAX_NUM_MOVING_OBJECTS=" << max_num_moving_objects << endl;
             oss << "NUM_WALLS=" << num_walls << endl;
-            oss << "ARR_WALLS=[" << arr_walls[0].str() << endl;
-            oss << "NUM_FAKE_WALLS=" << num_fake_walls << endl;
-            oss << "ARR_FAKE_WALLS=[" << arr_fake_walls[0].str() << endl;
+            oss << "ARR_WALLS=[";
+            if (num_walls == 0)
+                oss << "]" << endl;
+            else 
+                for (int i = 0; i < num_walls; ++i) {
+                    if (i == num_walls - 1) 
+                        oss << arr_walls[i].str() << "]" << endl;
+                    else
+                        oss << arr_walls[i].str() << ";";
+                }
+            oss << "NUM_FAKE_WALLS=" << num_fake_walls << endl;           
+            oss << "ARR_FAKE_WALLS=[";
+            if (num_fake_walls == 0)
+                oss << "]" << endl;
+            else 
+                for (int i = 0; i < num_fake_walls; ++i) {
+                    if (i == num_walls - 1) 
+                        oss << arr_fake_walls[i].str() << "]" << endl;
+                    else
+                        oss << arr_fake_walls[i].str() << ";";
+                }
             oss << "SHERLOCK_MOVING_RULE=" << sherlock_moving_rule << endl;
             oss << "SHERLOCK_INIT_POS=" << sherlock_init_pos.str() << endl;
             oss << "SHERLOCK_INIT_HP=" << sherlock_init_hp << endl;
@@ -636,17 +618,186 @@ class Configuration {
 
 // Robot, BaseItem, BaseBag,...
 class Robot : public MovingObject {
+    friend class TestStudyInPink;
     public:
         RobotType type;
         BaseItem * item;
     
     public:
         Robot(RobotType in_type) : type(in_type) {}
+};
 
+class RobotC : public Robot {
+    public:
+        Criminal * criminal;
 
+    public:
+        RobotC(int index, const Position & init_pos, Map * map, Criminal * criminal) : Robot(C), criminal(criminal) {
+            this->pos = init_pos;
+            this->map = map;
+            this->index = index;
+        }
+
+        Position getNextPosition() {
+            Position next_pos = criminal->getCurrentPosition();
+            // if (map->isValid(next_pos, this)) {
+            //     return next_pos;
+            // }
+            // return Position::npos;
+            return next_pos;
+        }
+
+        void move() {
+            Position next_pos = getNextPosition();
+            if (next_pos.isEqual(-1, -1)) {
+                return;
+            }
+            this->pos = next_pos;
+        }
+
+        string str() const {
+            return "Robot[pos=" + pos.str() + ";type=" + to_string(type) + ";dist=]";
+        }
+};
+
+Position RobotSMovingRule(int u_distance, int d_distance, int l_distance, int r_distance, Position pos);
+
+class RobotS : public Robot {
+    public:
+        Sherlock * sherlock;
+
+    public:
+        RobotS(int index, const Position & init_pos, Map * map, Sherlock * sherlock) : Robot(S), sherlock(sherlock) {}
+
+        ~RobotS() {}
+
+        Position getNextPosition() {
+            Position next_pos = this->pos;
+
+            Position Upos = this->pos;
+            Upos.setRow(Upos.getRow() - 1);
+            int Udistance = ManhattanDistance(Upos, sherlock->getCurrentPosition());
+
+            Position Dpos = this->pos;
+            Dpos.setRow(Dpos.getRow() + 1);
+            int Ddistance = ManhattanDistance(Dpos, sherlock->getCurrentPosition());
+
+            Position Lpos = this->pos;
+            Lpos.setCol(Lpos.getCol() - 1);
+            int Ldistance = ManhattanDistance(Lpos, sherlock->getCurrentPosition());
+
+            Position Rpos = this->pos;
+            Rpos.setCol(Rpos.getCol() + 1);
+            int Rdistance = ManhattanDistance(Rpos, sherlock->getCurrentPosition());
+
+            next_pos = RobotSMovingRule(Udistance, Ddistance, Ldistance, Rdistance, pos);
+
+            if (map->isValid(next_pos, this)) {
+                return next_pos;
+            }
+            return Position::npos;
+        }
+
+        void move() {
+            Position next_pos = getNextPosition();
+            if (next_pos.isEqual(-1, -1)) {
+                return;
+            }
+            this->pos = next_pos;
+        }
+
+        string str() const {
+            return "Robot[pos=" + pos.str() + ";type=" + to_string(type) + ";dist=" + to_string(ManhattanDistance(pos, sherlock->getCurrentPosition())) + "]";
+        }
+};
+
+class RobotW : public Robot {
+    public:
+        Watson * watson;
+
+    public:
+        RobotW(int index, const Position & init_pos, Map * map, Watson * watson) : Robot(W), watson(watson) {}
+
+        ~RobotW() {}
+
+        Position getNextPosition() {
+            Position next_pos = this->pos;
+
+            Position Upos = this->pos;
+            Upos.setRow(Upos.getRow() - 1);
+            int Udistance = ManhattanDistance(Upos, watson->getCurrentPosition());
+
+            Position Dpos = this->pos;
+            Dpos.setRow(Dpos.getRow() + 1);
+            int Ddistance = ManhattanDistance(Dpos, watson->getCurrentPosition());
+
+            Position Lpos = this->pos;
+            Lpos.setCol(Lpos.getCol() - 1);
+            int Ldistance = ManhattanDistance(Lpos, watson->getCurrentPosition());
+
+            Position Rpos = this->pos;
+            Rpos.setCol(Rpos.getCol() + 1);
+            int Rdistance = ManhattanDistance(Rpos, watson->getCurrentPosition());
+
+            next_pos = RobotSMovingRule(Udistance, Ddistance, Ldistance, Rdistance, pos);
+
+            if (map->isValid(next_pos, this)) {
+                return next_pos;
+            }
+            return Position::npos;
+        }
+
+        void move() {
+            Position next_pos = getNextPosition();
+            if (next_pos.isEqual(-1, -1)) {
+                return;
+            }
+            this->pos = next_pos;
+        }
+
+        string str() const {
+            return "Robot[pos=" + pos.str() + ";type=" + to_string(type) + ";dist=" + to_string(ManhattanDistance(pos, watson->getCurrentPosition())) + "]";
+        }
+};
+
+Position RobotSW_distance(Sherlock * sherlock, Watson * watson, Position pos) ;
+
+class RobotSW : public Robot {
+    public:
+        Sherlock * sherlock;
+        Watson * watson;
+
+    public:
+        RobotSW(int index, const Position & init_pos, Map * map, Sherlock * sherlock, Watson * watson) : Robot(SW), sherlock(sherlock), watson(watson) {}
+
+        ~RobotSW() {}
+
+        Position getNextPosition() {
+            Position next_pos = this->pos;
+            next_pos = RobotSW_distance(sherlock, watson, pos);
+            next_pos = RobotSW_distance(sherlock, watson, next_pos);
+
+            if (map->isValid(next_pos, this)) {
+                return next_pos;
+            }
+            return Position::npos;
+        }
+
+        void move() {
+            Position next_pos = getNextPosition();
+            if (next_pos.isEqual(-1, -1)) {
+                return;
+            }
+            this->pos = next_pos;
+        }
+
+        string str() const {
+            return "Robot[pos=" + pos.str() + ";type=" + to_string(type) + ";dist=" + to_string(ManhattanDistance(pos, sherlock->getCurrentPosition()) + ManhattanDistance(pos, watson->getCurrentPosition())) + "]";
+        }
 };
 
 class BaseItem {
+    friend class TestStudyInPink;
     protected:
         ItemType type;
     public:
@@ -792,12 +943,132 @@ class PassingCard : public BaseItem {
 
         void use(Character * obj, Robot * robot) {
             if (dynamic_cast<Watson*>(obj) != nullptr) {
-                if (challenge != robot->getType()) {
+                if (challenge != to_string(robot->type)) {
                     dynamic_cast<Watson*>(obj)->setExp(dynamic_cast<Watson*>(obj)->getExp() - 50);
                 }
             }
         }
 };
+
+class Item {
+public:
+    BaseItem* item;
+    Item* next;
+
+    Item(BaseItem* item) : item(item), next(nullptr) {}
+};
+
+class BaseBag {
+    friend class TestStudyInPink;
+    public:
+        Character * obj;
+        int capacity;
+        int count;
+        Item * head;
+
+    public:
+        BaseBag(Character * obj, int capacity) : obj(obj), capacity(capacity), count(0), head(nullptr) {}
+
+        ~BaseBag() {
+            Item* current = head;
+            while (current != nullptr) {
+                Item* nextItem = current->next;
+                delete current;
+                current = nextItem;
+            }
+        }
+
+        bool isFull() const {
+            return count == capacity;
+        }
+
+        virtual bool insert(BaseItem* item) {
+            if (isFull()) {
+                return false;
+            }
+            Item* newItem = new Item(item);
+            newItem->next = head;
+            head = newItem;
+            count++;
+            return true;
+        }
+
+        virtual BaseItem* get() {
+            Item* current = head;
+            Item* prev = nullptr;
+            while (current != nullptr) {
+                if (current->item->canUse(obj, nullptr)) {
+                    if (prev == nullptr) {
+                        head = current->next;
+                    } else {
+                        prev->next = current->next;
+                        current->next = head;
+                        head = current;
+                        current = head;
+                        head = head->next;
+                    }
+                    BaseItem* data = current->item;
+                    delete current;
+                    return data;
+                }
+                prev = current;
+                current = current->next;
+            }
+            return nullptr;
+        }
+
+        virtual BaseItem * get(ItemType type) {
+            Item* current = head;
+            Item* prev = nullptr;
+            while (current != nullptr) {
+                if (current->item->getType() == type) {
+                    if (prev == nullptr) {
+                        head = current->next;
+                    } else {
+                        prev->next = current->next;
+                        current->next = head;
+                        head = current;
+                        current = head;
+                        head = head->next;
+                    }
+                    BaseItem* data = current->item;
+                    delete current;
+                    return data;
+                }
+                prev = current;
+                current = current->next;
+            }
+            return nullptr;
+        }
+
+        int size() const {
+            return count;
+        }
+
+        virtual string str() const {
+            string res = "";
+            Item * current = head;
+            for (int i = 0; i < count; ++i) {
+                res += current->item->getType() + ",";
+                current = current->next;
+            }
+            if (!res.empty()) {
+                res.pop_back();
+            }
+            return "Bag[count=" + to_string(count) + ";" + res + "]";
+        }
+};
+
+class SherlockBag : public BaseBag {
+    public:
+        SherlockBag(Sherlock * sherlock) : BaseBag(sherlock, 13) {}
+};
+
+class WatsonBag : public BaseBag {
+    public:
+        WatsonBag(Watson * watson) : BaseBag(watson, 15) {}
+};
+
 
 class StudyPinkProgram {
     private:
@@ -813,15 +1084,36 @@ class StudyPinkProgram {
 
 
     public:
-        StudyPinkProgram(const string & config_file_path);
+        StudyPinkProgram(const string & config_file_path) {
+            config = new Configuration(config_file_path);
+            map = new Map(config->map_num_rows, config->map_num_cols, config->num_walls, config->arr_walls, config->num_fake_walls, config->arr_fake_walls);
+            sherlock = new Sherlock(1, config->sherlock_moving_rule, config->sherlock_init_pos, map, config->sherlock_init_hp, config->sherlock_init_exp);
+            watson = new Watson(2, config->watson_moving_rule, config->watson_init_pos, map, config->watson_init_hp, config->watson_init_exp);
+            criminal = new Criminal(2, config->criminal_init_pos, map, sherlock, watson);
+            arr_mv_objs = new ArrayMovingObject(config->max_num_moving_objects);
+            arr_mv_objs->add(criminal);
+            arr_mv_objs->add(sherlock);
+            arr_mv_objs->add(watson);
+        }
 
-        bool isStop() const;
+        bool isStop() const {
+            if (sherlock->getCurrentPosition().isEqual(criminal->getCurrentPosition().getRow(), criminal->getCurrentPosition().getCol())) {
+                return true;
+            }
+            else if (watson->getCurrentPosition().isEqual(criminal->getCurrentPosition().getRow(), criminal->getCurrentPosition().getCol())) {
+                return true;
+            }
+            else if (sherlock->getHp() <= 0 || watson->getHp() <= 0) {
+                return true;
+            }
+            return false;
+        }
 
         void printResult() const {
-            if (sherlock->getCurrentPosition().isEqual(criminal->getCurrentPosition())) {
+            if (sherlock->getCurrentPosition().isEqual(criminal->getCurrentPosition().getRow(), criminal->getCurrentPosition().getCol())) {
                 cout << "Sherlock caught the criminal" << endl;
             }
-            else if (watson->getCurrentPosition().isEqual(criminal->getCurrentPosition())) {
+            else if (watson->getCurrentPosition().isEqual(criminal->getCurrentPosition().getRow(), criminal->getCurrentPosition().getCol())) {
                 cout << "Watson caught the criminal" << endl;
             }
             else {
@@ -836,8 +1128,6 @@ class StudyPinkProgram {
         }
 
         void run(bool verbose) {
-            // Note: This is a sample code. You can change the implementation as you like.
-            // TODO
             for (int istep = 0; istep < config->num_steps; ++istep) {
                 for (int i = 0; i < arr_mv_objs->size(); ++i) {
                     arr_mv_objs->get(i)->move();
@@ -853,7 +1143,14 @@ class StudyPinkProgram {
             printResult();
         }
 
-        ~StudyPinkProgram();
+        ~StudyPinkProgram() {
+            delete config;
+            delete sherlock;
+            delete watson;
+            delete criminal;
+            delete map;
+            delete arr_mv_objs;
+        }
 };
 
 ////////////////////////////////////////////////
