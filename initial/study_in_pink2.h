@@ -116,6 +116,11 @@ class Position {
             this->c = c;
         }
 
+        void operator&=(const Position & other) {
+            this->r = other.r;
+            this->c = other.c;
+        }
+
         string str() const {
             ostringstream output;
             output << "(" << r << "," << c << ")";
@@ -152,7 +157,7 @@ class MovingObject {
         virtual Position getNextPosition() = 0;
 
         Position getCurrentPosition() const {
-            return pos;
+            return this->pos;
         }
 
         virtual string getName() const {
@@ -260,6 +265,10 @@ class Sherlock : public Character {
             return Position::npos;
         }
 
+        Position getCurrentPosition() const {
+            return this->pos;
+        }
+
         void move() {
             Position next_pos = getNextPosition();
             if (next_pos.isEqual(-1, -1)) {
@@ -320,6 +329,10 @@ class Watson : public Character {
                 return next_pos;
             }
             return Position::npos;
+        }
+
+        Position getCurrentPosition() const {
+            return this->pos;
         }
 
         void move() {
@@ -393,8 +406,11 @@ class Criminal : public Character {
             }
             return Position::npos;
         }
-        
 
+        Position getCurrentPosition() const {
+            return this->pos;
+        }
+        
         void move() {
             Position next_pos = getNextPosition();
             if (next_pos.isEqual(-1, -1)) {
@@ -632,19 +648,20 @@ class RobotC : public Robot {
         Criminal * criminal;
 
     public:
-        RobotC(int index, const Position & init_pos, Map * map, Criminal * criminal) : Robot(C), criminal(criminal) {
+        RobotC(int index, const Position & init_pos, Map * map, Criminal * criminal) : Robot(C) {
             this->pos = init_pos;
             this->map = map;
             this->index = index;
+            this->name = "RobotC";
+            this->criminal = criminal;
         }
 
         Position getNextPosition() {
             Position next_pos = criminal->getCurrentPosition();
-            // if (map->isValid(next_pos, this)) {
-            //     return next_pos;
-            // }
-            // return Position::npos;
-            return next_pos;
+            if (map->isValid(next_pos, this)) {
+                return next_pos;
+            }
+            return Position::npos;
         }
 
         void move() {
@@ -656,7 +673,7 @@ class RobotC : public Robot {
         }
 
         string str() const {
-            return "Robot[pos=" + pos.str() + ";type=" + to_string(type) + ";dist=]";
+            return "Robot[pos=" + pos.str() + ";type=" + this->name  + ";dist=]";
         }
 };
 
@@ -707,7 +724,7 @@ class RobotS : public Robot {
         }
 
         string str() const {
-            return "Robot[pos=" + pos.str() + ";type=" + to_string(type) + ";dist=" + to_string(ManhattanDistance(pos, sherlock->getCurrentPosition())) + "]";
+            return "Robot[pos=" + pos.str() + ";type=" + this->name + ";dist=" + to_string(ManhattanDistance(pos, sherlock->getCurrentPosition())) + "]";
         }
 };
 
