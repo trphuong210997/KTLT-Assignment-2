@@ -155,12 +155,10 @@ bool Map :: isValid(const Position & pos, MovingObject * mv_obj) const {
                 return false;
 
             if (map[pos.getRow()][pos.getCol()]->getType() == FAKE_WALL) {
-                if(mv_obj->getName() == "Watson")
-                {       
-                    FakeWall * fake_wall = dynamic_cast<FakeWall *>(map[pos.getRow()][pos.getCol()]);
-                    if (fake_wall->getReqExp() > dynamic_cast<Watson*>(mv_obj)->getExp()) 
-                        return false;
-                }
+                FakeWall * fake_wall = dynamic_cast<FakeWall *>(map[pos.getRow()][pos.getCol()]);
+                if (fake_wall->getReqExp() > dynamic_cast<Watson*>(mv_obj)->getExp()) 
+                    return false;
+    
             }
             return true;
 }

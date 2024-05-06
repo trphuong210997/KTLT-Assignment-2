@@ -70,7 +70,7 @@ class Wall : public MapElement {
 };
 
 class FakeWall : public MapElement {
-    public:
+    private:
         int req_exp;
 
     public:
@@ -190,19 +190,23 @@ class Map {
                         if (array_walls[k].isEqual(i, j)) {
                             delete map[i][j];
                             map[i][j] = new Wall();
-                            break;
                         }
                     }
+                }
+            }
+            
+            for (int i = 0; i < num_rows; ++i) {
+                for (int j = 0; j < num_cols; ++j) {
                     for (int k = 0; k < num_fake_walls; ++k) {
                         if (array_fake_walls[k].isEqual(i, j)) {
                             delete map[i][j];
                             int req_exp = ((i * 257) + (j * 139) + 89) % 900 + 1;
                             map[i][j] = new FakeWall(req_exp);
-                            break;
                         }
                     }
                 }
             }
+            
         }
 
         ~Map() {
@@ -213,6 +217,14 @@ class Map {
                 delete [] map[i];
             }
             delete [] map;
+        }   
+
+        int getFakeWallExpRequirement(int row, int col) const {
+            if (map[row][col]->getType() == FAKE_WALL) {
+                return static_cast<FakeWall*>(map[row][col])->getReqExp();
+            } else {
+                return -1;
+            }
         }
 
         bool isValid(const Position & pos, MovingObject * mv_obj) const;
@@ -328,7 +340,8 @@ class Watson : public Character {
             if (map->isValid(next_pos, this)) {
                 return next_pos;
             }
-            return Position::npos;
+            else 
+                return Position::npos;
         }
 
         Position getCurrentPosition() const {
@@ -373,6 +386,7 @@ class Criminal : public Character {
     private:
         Sherlock * sherlock;
         Watson * watson;
+        Position prev_pos;
 
     public:
         Criminal(int index, const Position & init_pos, Map * map, Sherlock * sherlock, Watson * watson) : sherlock(sherlock), watson(watson) {
@@ -380,6 +394,7 @@ class Criminal : public Character {
             this->pos = init_pos;
             this->map = map;
             this->index = index;
+            this->prev_pos = init_pos;  
         }
 
         Position getNextPosition() {
@@ -410,8 +425,13 @@ class Criminal : public Character {
         Position getCurrentPosition() const {
             return this->pos;
         }
+
+        Position getPrevPosition() const {
+            return this->prev_pos;
+        }
         
         void move() {
+            prev_pos = pos;
             Position next_pos = getNextPosition();
             if (next_pos.isEqual(-1, -1)) {
                 return;
@@ -516,9 +536,40 @@ class Configuration {
             string line;
             while (getline(file, line)) {
                 istringstream iss(line);
+                istringstream iss2(line);
+                istringstream iss3(line);
                 string key, value;
                 char delim;
                 int r, c;
+
+                if(getline(iss2, key, '=')) {
+                    if (key == "NUM_WALLS")
+                        iss2 >> num_walls;
+                    else if (key == "NUM_FAKE_WALLS")
+                        iss2 >> num_fake_walls;
+                }
+
+                if(getline(iss3, key, '=')) {
+                    if (key == "ARRAY_WALLS") {
+                        int count = 0;
+                        string check = "";
+                        while (getline(iss3, key, ';')) {
+                            check += key + " ";
+                            count++;    
+                        }
+                        this->num_walls = count;
+                    }
+
+                    else if (key == "ARRAY_FAKE_WALLS") {
+                        int count = 0;
+                        string check = "";
+                        while (getline(iss3, key, ';')) {
+                            check += key + " ";
+                            count++;
+                        }
+                        this->num_fake_walls = count;
+                    }
+                }
 
                 if (getline(iss, key, '=')) {
                     if (key == "MAP_NUM_ROWS") 
@@ -527,10 +578,6 @@ class Configuration {
                         iss >> map_num_cols;
                     else if (key == "MAX_NUM_MOVING_OBJECTS") 
                         iss >> max_num_moving_objects;
-                    else if (key == "NUM_WALLS")
-                        iss >> num_walls;
-                    else if (key == "NUM_FAKE_WALLS")
-                        iss >> num_fake_walls;
                     else if (key == "SHERLOCK_INIT_HP")
                         iss >> sherlock_init_hp;
                     else if (key == "SHERLOCK_INIT_EXP")
@@ -557,6 +604,40 @@ class Configuration {
                         iss >> delim >> r >> delim >> c;
                         criminal_init_pos = Position(r,c);
                     }
+
+                    // else if (key == "ARRAY_WALLS") {
+                    //     int count = 0;
+                    //     string check = "";
+                    //     while (getline(iss, key, ';')) {
+                    //         check += key + " ";
+                    //         count++;
+                    //     }
+                    //     this->num_walls = count;
+                    //     arr_walls = new Position[num_walls];
+                    //     string temp = check;
+                    //     istringstream iss2(temp);
+                    //     for (int i = 0; i < num_walls; ++i) {
+                    //         iss2 >> delim >> delim >> r >> delim >> c;
+                    //         Position pos = Position(r, c);
+                    //         arr_walls[i] = pos;
+                    //         if (i < num_walls - 1) { 
+                    //             iss2.ignore();
+                    //         }
+                    //     }
+                    // }
+
+                    // else if (key == "ARRAY_FAKE_WALLS") {
+                    //     int count = 0;
+                    //     string check = "";
+                    //     while (getline(iss, key, ';')) {
+                    //         check += key + " ";
+                    //         count++;
+                    //     }
+                    //     this->num_fake_walls = count;
+                    //     arr_fake_walls = new Position[num_fake_walls];
+                        
+                    // }
+
                     else if (key == "ARRAY_WALLS") {
                         arr_walls = new Position[num_walls];
                         for (int i = 0; i < num_walls; ++i) {
@@ -568,13 +649,14 @@ class Configuration {
                             }
                         }
                     }
+                    
                     else if (key == "ARRAY_FAKE_WALLS") {
                         arr_fake_walls = new Position[num_fake_walls];
                         for (int i = 0; i < num_fake_walls; ++i) {
                             iss >> delim >> delim >> r >> delim >> c;
                             Position pos = Position(r, c);
                             arr_fake_walls[i] = pos;
-                            if (i < num_walls - 1) { 
+                            if (i < num_fake_walls - 1) { 
                                 iss.ignore();
                             }
                         }
@@ -597,7 +679,7 @@ class Configuration {
             oss << "MAP_NUM_COLS=" << map_num_cols << endl;
             oss << "MAX_NUM_MOVING_OBJECTS=" << max_num_moving_objects << endl;
             oss << "NUM_WALLS=" << num_walls << endl;
-            oss << "ARR_WALLS=[";
+            oss << "ARRAY_WALLS=[";
             if (num_walls == 0)
                 oss << "]" << endl;
             else 
@@ -608,12 +690,12 @@ class Configuration {
                         oss << arr_walls[i].str() << ";";
                 }
             oss << "NUM_FAKE_WALLS=" << num_fake_walls << endl;           
-            oss << "ARR_FAKE_WALLS=[";
+            oss << "ARRAY_FAKE_WALLS=[";
             if (num_fake_walls == 0)
                 oss << "]" << endl;
             else 
                 for (int i = 0; i < num_fake_walls; ++i) {
-                    if (i == num_walls - 1) 
+                    if (i == num_fake_walls - 1) 
                         oss << arr_fake_walls[i].str() << "]" << endl;
                     else
                         oss << arr_fake_walls[i].str() << ";";
@@ -652,12 +734,12 @@ class RobotC : public Robot {
             this->pos = init_pos;
             this->map = map;
             this->index = index;
-            this->name = "RobotC";
+            this->name = "C";
             this->criminal = criminal;
         }
 
         Position getNextPosition() {
-            Position next_pos = criminal->getCurrentPosition();
+            Position next_pos = criminal->getPrevPosition();
             if (map->isValid(next_pos, this)) {
                 return next_pos;
             }
@@ -684,7 +766,12 @@ class RobotS : public Robot {
         Sherlock * sherlock;
 
     public:
-        RobotS(int index, const Position & init_pos, Map * map, Sherlock * sherlock) : Robot(S), sherlock(sherlock) {}
+        RobotS(int index, const Position & init_pos, Map * map, Sherlock * sherlock) : Robot(S), sherlock(sherlock) {
+            this->pos = init_pos;
+            this->map = map;
+            this->index = index;
+            this->name = "S";
+        }
 
         ~RobotS() {}
 
@@ -733,7 +820,12 @@ class RobotW : public Robot {
         Watson * watson;
 
     public:
-        RobotW(int index, const Position & init_pos, Map * map, Watson * watson) : Robot(W), watson(watson) {}
+        RobotW(int index, const Position & init_pos, Map * map, Watson * watson) : Robot(W), watson(watson) {
+            this->pos = init_pos;
+            this->map = map;
+            this->index = index;
+            this->name = "W";
+        }
 
         ~RobotW() {}
 
@@ -785,7 +877,12 @@ class RobotSW : public Robot {
         Watson * watson;
 
     public:
-        RobotSW(int index, const Position & init_pos, Map * map, Sherlock * sherlock, Watson * watson) : Robot(SW), sherlock(sherlock), watson(watson) {}
+        RobotSW(int index, const Position & init_pos, Map * map, Sherlock * sherlock, Watson * watson) : Robot(SW), sherlock(sherlock), watson(watson) {
+            this->pos = init_pos;
+            this->map = map;
+            this->index = index;
+            this->name = "SW";
+        }
 
         ~RobotSW() {}
 

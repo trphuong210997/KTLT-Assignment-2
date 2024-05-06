@@ -42,6 +42,15 @@ public:
         Criminal * criminal = new Criminal(0, Position(7, 9), map, sherlock, watson);
         cout << criminal->str() << endl;
 
+        cout << "Fake_Wall exp: " << map->getFakeWallExpRequirement(2, 0) << endl;
+        cout << "Watson exp: " << watson->getExp() << endl;
+        bool is_valid = watson->map->isValid(Position(2, 0), watson);
+        if (is_valid) {
+            cout << "Watson can move to fake wall" << endl;
+        } else {
+            cout << "Watson cannot move to fake wall" << endl;
+        }
+
         cout << "* Sherlock makes a move" << endl;
         sherlock->move();
         cout << sherlock->str() << endl;
@@ -106,8 +115,8 @@ public:
 };
 
 int main(int argc, const char * argv[]) {
-    // TestStudyInPink::satc_01();
+    TestStudyInPink::satc_01();
     // TestStudyInPink::satc_02();
-    TestStudyInPink::satc_03();
+    // TestStudyInPink::satc_03();
     return 0;
 }
